@@ -36,8 +36,60 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.ingestData = (req, res) => {
-  const { gps, combustible, temperatura } = req.body;
-  // Aquí deberías guardar en BD y procesar la predicción
-  return res.json({ ok: true, msg: 'Datos recibidos' });
+exports.ingestData = async (req, res) => {
+  const { vehiculo_id, gps, combustible, temperatura, velocidad, latitud, longitud } = req.body;
+
+  if (!vehiculo_id || !gps || combustible === null || temperatura === null || velocidad === null || latitud === null || longitud === null) {
+    return res.status(400).json({ error: 'Faltan datos obligatorios' });
+  }
+
+  try {
+    const vehiculo = await sql`
+      SELECT id FROM vehiculos WHERE dispositivo_id = ${vehiculo_id}
+    `;
+
+    if (!vehiculo.length) {
+      return res.status(404).json({ error: 'Vehículo no encontrado' });
+    }
+
+    let estado = '';
+
+    if (combustible <= 10) {
+      if (estado === '') {
+        estado += 'alerta de combustible';
+      } else {
+        estado += '| alerta de combustible';
+      }
+    }
+
+    if (temperatura >= 90) {
+      if (estado === '') {
+        estado += 'alerta de temperatura';
+      } else {
+        estado += '| alerta de temperatura';
+      }
+    }
+
+    if (velocidad > 80) {
+      if (estado === '') {
+        estado += 'alerta de exceso de velocidad';
+      } else {
+        estado += '| alerta de exceso de velocidad';
+      }
+    }
+
+    if (estado === '') {
+      estado = 'normal';
+    }
+
+    await sql`
+      INSERT INTO sensores (vehiculo_id, gps, combustible, temperatura, velocidad, latitud, longitud, estado)
+      VALUES (${vehiculo[0].id}, ${gps}, ${combustible}, ${temperatura}, ${velocidad}, ${latitud}, ${longitud}, ${estado})
+    `;
+
+    res.json({ ok: true, data: { vehiculo_id, gps, combustible, temperatura, velocidad, latitud, longitud, estado } });
+  } catch (err) {
+    console.error('Error en ingesta:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
 };

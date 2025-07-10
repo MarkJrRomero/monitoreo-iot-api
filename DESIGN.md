@@ -42,6 +42,16 @@ npm install swagger-ui-express swagger-jsdoc
 - **swagger-ui-express**: Interfaz web para visualizar la documentación de la API
 - **swagger-jsdoc**: Genera especificaciones OpenAPI a partir de comentarios JSDoc en el código
 
+### 5. Pruebas Unitarias
+```bash
+npm install --save-dev jest supertest
+```
+
+#### Framework de Testing
+- **Jest**: Framework de testing completo para JavaScript
+- **Supertest**: Biblioteca para testing de APIs HTTP
+- **Configuración**: Tests de integración y unitarios para endpoints
+
 ## 📁 Estructura del Proyecto
 
 ### Organización de Carpetas
@@ -53,13 +63,14 @@ src/
 ├── services/       # Lógica de negocio
 ├── middlewares/    # Middlewares personalizados
 ├── utils/          # Utilidades y helpers
+├── tests/          # Pruebas unitarias e integración
 └── index.js        # Punto de entrada de la aplicación
 ```
 
 ### Comandos para Crear la Estructura
 ```bash
 mkdir src
-mkdir src/routes src/controllers src/models src/services src/utils src/middlewares
+mkdir src/routes src/controllers src/models src/services src/utils src/middlewares src/tests
 touch src/index.js
 ```
 
@@ -86,7 +97,9 @@ Seguir las instrucciones oficiales de conexión de Supabase para configurar la c
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   }
 }
 ```
@@ -101,6 +114,7 @@ Seguir las instrucciones oficiales de conexión de Supabase para configurar la c
 6. Agregar middlewares de autenticación
 7. Configurar validaciones de datos
 8. Configurar documentación API con Swagger
+9. Implementar pruebas unitarias con Jest y Supertest
 
 ## 📋 Checklist de Implementación
 
@@ -114,7 +128,7 @@ Seguir las instrucciones oficiales de conexión de Supabase para configurar la c
 - [X] WebSocket implementado
 - [ ] Autenticación configurada
 - [X] Documentación API configurada
-- [ ] Tests implementados
+- [X] Tests implementados
 
 ---
 

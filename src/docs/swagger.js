@@ -12,6 +12,15 @@ const swaggerDefinition = {
       url: 'http://localhost:3000/api',
     },
   ],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+    },
+  },
 };
 
 const options = {
