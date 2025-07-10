@@ -126,7 +126,7 @@ Seguir las instrucciones oficiales de conexión de Supabase para configurar la c
 - [X] Servidor Express básico funcionando
 - [X] Rutas API implementadas
 - [X] WebSocket implementado
-- [ ] Autenticación configurada
+- [X] Autenticación configurada
 - [X] Documentación API configurada
 - [X] Tests implementados
 
