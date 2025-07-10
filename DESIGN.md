@@ -1,23 +1,110 @@
-Se eligio node por su facilidad a la hroa de crear servicios rest con websocket y por experinecia con el stack 
+# Diseño del Sistema de Monitoreo IoT API
 
-Iniciamos el proyecot con 
+## 🎯 Objetivo del Proyecto
+
+Desarrollo de una API REST con soporte para WebSocket para el monitoreo de dispositivos IoT, utilizando Node.js como plataforma principal.
+
+## 🛠️ Stack Tecnológico
+
+### Tecnologías Principales
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Base de Datos**: PostgreSQL (Supabase)
+- **WebSocket**: ws
+- **Variables de Entorno**: dotenv
+
+### Justificación de la Elección
+Se eligió Node.js por su facilidad para crear servicios REST con WebSocket y por la experiencia previa con este stack tecnológico.
+
+## 📦 Instalación y Configuración
+
+### 1. Inicialización del Proyecto
+```bash
 npm init -y
+```
 
-Y usaremos express ademas de dotenv para las variables de entorno
+### 2. Dependencias Principales
+```bash
 npm install express pg ws dotenv
+```
 
-Instalamos nodemon para tener agilidad al hacer cambios
+### 3. Dependencias de Desarrollo
+```bash
 npm install --save-dev nodemon
+```
 
-Usare una estructura limpia para las carpetas un modelo estandar utilizando los comandos
+## 📁 Estructura del Proyecto
 
+### Organización de Carpetas
+```
+src/
+├── controllers/     # Controladores de la API
+├── models/         # Modelos de datos
+├── routes/         # Definición de rutas
+├── services/       # Lógica de negocio
+├── middlewares/    # Middlewares personalizados
+├── utils/          # Utilidades y helpers
+└── index.js        # Punto de entrada de la aplicación
+```
+
+### Comandos para Crear la Estructura
+```bash
 mkdir src
 mkdir src/routes src/controllers src/models src/services src/utils src/middlewares
 touch src/index.js
+```
 
+## 🗄️ Base de Datos
 
-Usaremos base de datos de supabse que e spostgress para ello instalamos 
+### Configuración de Supabase
+- **Tipo**: PostgreSQL
+- **Proveedor**: Supabase
+- **Cliente**: postgres
 
+### Instalación del Cliente
+```bash
 npm install postgres
+```
 
-y seguimso las instrucciones de conexion de supabase
+### Conexión
+Seguir las instrucciones oficiales de conexión de Supabase para configurar la conexión a la base de datos.
+
+## 🔧 Configuración de Desarrollo
+
+### Scripts Recomendados (package.json)
+```json
+{
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
+```
+
+## 🚀 Próximos Pasos
+
+1. Configurar variables de entorno con dotenv
+2. Implementar conexión a Supabase
+3. Crear modelos de datos
+4. Desarrollar controladores y rutas
+5. Implementar WebSocket para tiempo real
+6. Agregar middlewares de autenticación
+7. Configurar validaciones de datos
+
+## 📋 Checklist de Implementación
+
+- [X] Configuración inicial del proyecto
+- [X] Estructura de carpetas creada
+- [X] Dependencias instaladas
+- [X] Conexión a Supabase configurada
+- [X] Variables de entorno configuradas
+- [X] Servidor Express básico funcionando
+- [X] Rutas API implementadas
+- [ ] WebSocket implementado
+- [ ] Autenticación configurada
+- [ ] Tests implementados
+
+---
+
+*Documento de diseño actualizado para el proyecto de Monitoreo IoT API*
