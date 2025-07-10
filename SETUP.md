@@ -74,12 +74,41 @@ CREATE TABLE sensores (
 );
 ```
 
-### 5. Crear usuario administrador
-Ejecuta el script de creación de admin:
+### 5. Crear usuarios del sistema
+Ejecuta el script de creación de usuarios:
 
 ```bash
-npm run test src/tests/crear-admin.test.js
+npm test src/tests/crear-users.test.js
 ```
+
+## 👥 Usuarios del Sistema
+
+### 🔐 Usuario Administrador
+- **Nombre:** admin
+- **Correo:** admin@demo.com
+- **Contraseña:** 12345
+- **Rol:** admin
+- **Permisos:** Acceso completo a todas las funcionalidades
+
+### 👤 Usuarios Estándar
+
+#### 1. Juan Pérez
+- **Correo:** juan.perez@empresa.com
+- **Contraseña:** 12345
+- **Rol:** estandar
+- **Permisos:** Acceso básico a datos de sensores
+
+#### 2. María García
+- **Correo:** maria.garcia@empresa.com
+- **Contraseña:** 12345
+- **Rol:** estandar
+- **Permisos:** Acceso básico a datos de sensores
+
+#### 3. Carlos López
+- **Correo:** carlos.lopez@empresa.com
+- **Contraseña:** 12345
+- **Rol:** estandar
+- **Permisos:** Acceso básico a datos de sensores
 
 ## 🚀 Ejecutar el proyecto
 
@@ -98,7 +127,7 @@ npm start
 npm test
 ```
 
-## Verificar que todo funciona
+## ✅ Verificar que todo funciona
 
 ### 1. Verificar el servidor
 - El servidor debe estar corriendo en `http://localhost:3000`
@@ -118,14 +147,26 @@ npm test
 - Abre `http://localhost:3000/websocket-test` en tu navegador
 - Haz clic en "Conectar" y luego "Suscribirse"
 
-## �� Probar la API
+##  Probar la API
 
 ### 1. Login (obtener token)
+
+#### Con usuario administrador:
 ```bash
 curl -X POST http://localhost:3000/api/login \
   -H "Content-Type: application/json" \
   -d '{
     "correo": "admin@demo.com",
+    "password": "12345"
+  }'
+```
+
+#### Con usuario estándar:
+```bash
+curl -X POST http://localhost:3000/api/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "correo": "juan.perez@empresa.com",
     "password": "12345"
   }'
 ```
@@ -158,6 +199,17 @@ curl -X GET http://localhost:3000/api/stats/VH1ZU432E \
   -H "Authorization: Bearer TU_TOKEN_AQUI"
 ```
 
+### 5. Obtener alertas activas
+```bash
+curl -X GET http://localhost:3000/api/alerts/VH1ZU432E \
+  -H "Authorization: Bearer TU_TOKEN_AQUI"
+```
+
+### 6. Verificar estadísticas WebSocket
+```bash
+curl -X GET http://localhost:3000/api/websocket/stats
+```
+
 ## 🔌 Probar WebSocket en tiempo real
 
 ### 1. Conectar cliente WebSocket
@@ -172,7 +224,3 @@ curl -X GET http://localhost:3000/api/stats/VH1ZU432E \
 3. Verás los datos aparecer en tiempo real en el cliente
 
 ## 📁 Estructura del proyecto
-```
-monitoreo-iot-api/
-├── src/
-```
