@@ -1,6 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const { login, ingestData, getSensorData, getVehicleStats, getActiveAlerts } = require('../controllers/api.controller');
+const { 
+  login, 
+  ingestData, 
+  getSensorData, 
+  getVehicleStats, 
+  getActiveAlerts,
+  getWebSocketStats,
+  getAllVehicles,
+  getVehiclesWithAlerts,
+  getAlertsSummary,
+  getVehicleAlertHistory
+} = require('../controllers/api.controller');
 const { authMiddleware } = require('../middlewares/auth.middleware');
 
 /**
@@ -175,5 +186,84 @@ router.get('/stats/:vehicleId', authMiddleware, getVehicleStats);
  *         description: Error interno del servidor
  */
 router.get('/alerts/:vehicleId', authMiddleware, getActiveAlerts);
+
+/**
+ * @swagger
+ * /vehicles:
+ *   get:
+ *     summary: Obtener todos los vehículos
+ *     description: Obtiene todos los vehículos con su última posición y estado
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de vehículos
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/vehicles', authMiddleware, getAllVehicles);
+
+/**
+ * @swagger
+ * /vehicles/alerts:
+ *   get:
+ *     summary: Obtener vehículos con alertas
+ *     description: Obtiene todos los vehículos que tienen alertas activas
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de vehículos con alertas
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/vehicles/alerts', authMiddleware, getVehiclesWithAlerts);
+
+/**
+ * @swagger
+ * /alerts/summary:
+ *   get:
+ *     summary: Obtener resumen de alertas
+ *     description: Obtiene un resumen de alertas por tipo
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Resumen de alertas
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/alerts/summary', authMiddleware, getAlertsSummary);
+
+/**
+ * @swagger
+ * /vehicles/{vehicleId}/alerts/history:
+ *   get:
+ *     summary: Obtener historial de alertas
+ *     description: Obtiene el historial de alertas de un vehículo específico
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: vehicleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del vehículo
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Número máximo de registros
+ *     responses:
+ *       200:
+ *         description: Historial de alertas
+ *       404:
+ *         description: Vehículo no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/vehicles/:vehicleId/alerts/history', authMiddleware, getVehicleAlertHistory);
 
 module.exports = router;

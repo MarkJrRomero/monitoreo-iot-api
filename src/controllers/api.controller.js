@@ -197,3 +197,144 @@ exports.getActiveAlerts = async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
+// Obtener todos los vehículos con su última posición
+exports.getAllVehicles = async (req, res) => {
+  try {
+    const vehicles = await sql`
+      SELECT 
+        v.id,
+        v.nombre,
+        v.dispositivo_id,
+        v.usuario_id,
+        s.latitud,
+        s.longitud,
+        s.estado,
+        s.timestamp as ultima_actualizacion,
+        s.combustible,
+        s.temperatura,
+        s.velocidad
+      FROM vehiculos v
+      LEFT JOIN LATERAL (
+        SELECT * FROM sensores 
+        WHERE vehiculo_id = v.id 
+        ORDER BY timestamp DESC 
+        LIMIT 1
+      ) s ON true
+      ORDER BY v.nombre
+    `;
+    
+    res.json({
+      ok: true,
+      data: vehicles
+    });
+  } catch (error) {
+    console.error('Error obteniendo vehículos:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// Obtener vehículos con alertas activas
+exports.getVehiclesWithAlerts = async (req, res) => {
+  try {
+    const vehiclesWithAlerts = await sql`
+      SELECT 
+        v.id,
+        v.nombre,
+        v.dispositivo_id,
+        v.usuario_id,
+        s.latitud,
+        s.longitud,
+        s.estado,
+        s.timestamp as ultima_actualizacion,
+        s.combustible,
+        s.temperatura,
+        s.velocidad,
+        CASE 
+          WHEN s.estado LIKE '%alerta de combustible%' THEN 'combustible'
+          WHEN s.estado LIKE '%alerta de temperatura%' THEN 'temperatura'
+          WHEN s.estado LIKE '%alerta de exceso de velocidad%' THEN 'velocidad'
+          ELSE 'normal'
+        END as tipo_alerta
+      FROM vehiculos v
+      LEFT JOIN LATERAL (
+        SELECT * FROM sensores 
+        WHERE vehiculo_id = v.id 
+        ORDER BY timestamp DESC 
+        LIMIT 1
+      ) s ON true
+      WHERE s.estado != 'normal' 
+        AND s.estado IS NOT NULL
+        AND s.timestamp >= NOW() - INTERVAL '1 hour'
+      ORDER BY s.timestamp DESC
+    `;
+    
+    res.json({
+      ok: true,
+      data: vehiclesWithAlerts
+    });
+  } catch (error) {
+    console.error('Error obteniendo vehículos con alertas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// Obtener resumen de alertas por tipo
+exports.getAlertsSummary = async (req, res) => {
+  try {
+    const alertsSummary = await sql`
+      SELECT 
+        COUNT(*) as total_alertas,
+        COUNT(CASE WHEN estado LIKE '%alerta de combustible%' THEN 1 END) as alertas_combustible,
+        COUNT(CASE WHEN estado LIKE '%alerta de temperatura%' THEN 1 END) as alertas_temperatura,
+        COUNT(CASE WHEN estado LIKE '%alerta de exceso de velocidad%' THEN 1 END) as alertas_velocidad
+      FROM sensores s
+      JOIN vehiculos v ON s.vehiculo_id = v.id
+      WHERE s.estado != 'normal' 
+        AND s.timestamp >= NOW() - INTERVAL '1 hour'
+    `;
+    
+    res.json({
+      ok: true,
+      data: alertsSummary[0]
+    });
+  } catch (error) {
+    console.error('Error obteniendo resumen de alertas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// Obtener historial de alertas de un vehículo
+exports.getVehicleAlertHistory = async (req, res) => {
+  const { vehicleId } = req.params;
+  const { limit = 50 } = req.query;
+
+  try {
+    const alertHistory = await sql`
+      SELECT 
+        s.*,
+        v.nombre as vehiculo_nombre,
+        v.dispositivo_id,
+        CASE 
+          WHEN s.estado LIKE '%alerta de combustible%' THEN 'combustible'
+          WHEN s.estado LIKE '%alerta de temperatura%' THEN 'temperatura'
+          WHEN s.estado LIKE '%alerta de exceso de velocidad%' THEN 'velocidad'
+          ELSE 'normal'
+        END as tipo_alerta
+      FROM sensores s
+      JOIN vehiculos v ON s.vehiculo_id = v.id
+      WHERE v.dispositivo_id = ${vehicleId}
+        AND s.estado != 'normal'
+      ORDER BY s.timestamp DESC
+      LIMIT ${limit}
+    `;
+    
+    res.json({
+      ok: true,
+      data: alertHistory
+    });
+  } catch (error) {
+    console.error('Error obteniendo historial de alertas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
