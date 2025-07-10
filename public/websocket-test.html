@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test WebSocket - Monitoreo IoT</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .message {
+            background-color: #e9ecef;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .alert {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .sensor-data {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        .controls {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        #messages {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e3f2fd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 Test WebSocket - Monitoreo IoT</h1>
+        
+        <div class="controls">
+            <h3>Configuración</h3>
+            <input type="text" id="vehicleId" placeholder="ID del vehículo" value="VH1ZU432E">
+            <button onclick="connect()">Conectar</button>
+            <button onclick="disconnect()">Desconectar</button>
+            <button onclick="subscribe()">Suscribirse</button>
+            <button onclick="unsubscribe()">Desuscribirse</button>
+            <button onclick="ping()">Ping</button>
+            <button onclick="clearMessages()">Limpiar Mensajes</button>
+        </div>
+
+        <div id="status" class="status disconnected">
+            Estado: Desconectado
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Pruebas Automáticas</h3>
+            <button onclick="testConnection()">Probar Conexión</button>
+            <button onclick="testSubscription()">Probar Suscripción</button>
+            <button onclick="testPing()">Probar Ping</button>
+            <button onclick="testFullFlow()">Prueba Completa</button>
+        </div>
+
+        <div class="controls">
+            <h3>Mensajes Recibidos</h3>
+            <div id="messages"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let isConnected = false;
+
+        function updateStatus(message, isConnected) {
+            const status = document.getElementById('status');
+            status.textContent = `Estado: ${message}`;
+            status.className = `status ${isConnected ? 'connected' : 'disconnected'}`;
+        }
+
+        function addMessage(message, type = 'message') {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.innerHTML = `
+                <strong>${new Date().toLocaleTimeString()}</strong><br>
+                <pre>${JSON.stringify(message, null, 2)}</pre>
+            `;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const wsUrl = `${protocol}//${host}`;
+            
+            console.log('Conectando a:', wsUrl);
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = function() {
+                isConnected = true;
+                updateStatus('Conectado', true);
+                addMessage({ type: 'connection', message: 'Conexión establecida' }, 'sensor-data');
+            };
+
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    addMessage(data, data.type === 'alert' ? 'alert' : 'sensor-data');
+                } catch (error) {
+                    addMessage({ error: 'Error parsing message', data: event.data }, 'alert');
+                }
+            };
+
+            ws.onclose = function() {
+                isConnected = false;
+                updateStatus('Desconectado', false);
+                addMessage({ type: 'disconnection', message: 'Conexión cerrada' }, 'alert');
+            };
+
+            ws.onerror = function(error) {
+                console.error('Error en WebSocket:', error);
+                addMessage({ type: 'error', message: 'Error en WebSocket', error: error }, 'alert');
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function subscribe() {
+            if (!isConnected) {
+                alert('Debes conectarte primero');
+                return;
+            }
+            
+            const vehicleId = document.getElementById('vehicleId').value;
+            if (!vehicleId) {
+                alert('Ingresa un ID de vehículo');
+                return;
+            }
+
+            const message = {
+                type: 'subscribe',
+                vehicleId: vehicleId,
+                userId: 'test-user'
+            };
+
+            ws.send(JSON.stringify(message));
+            addMessage({ type: 'sent', message: 'Suscripción enviada', data: message }, 'sensor-data');
+        }
+
+        function unsubscribe() {
+            if (!isConnected) {
+                alert('Debes conectarte primero');
+                return;
+            }
+            
+            const vehicleId = document.getElementById('vehicleId').value;
+            const message = {
+                type: 'unsubscribe',
+                vehicleId: vehicleId
+            };
+
+            ws.send(JSON.stringify(message));
+            addMessage({ type: 'sent', message: 'Desuscripción enviada', data: message }, 'sensor-data');
+        }
+
+        function ping() {
+            if (!isConnected) {
+                alert('Debes conectarte primero');
+                return;
+            }
+
+            const message = { type: 'ping' };
+            ws.send(JSON.stringify(message));
+            addMessage({ type: 'sent', message: 'Ping enviado', data: message }, 'sensor-data');
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+        }
+
+        // Funciones de prueba automática
+        function testConnection() {
+            clearMessages();
+            connect();
+            setTimeout(() => {
+                if (isConnected) {
+                    addMessage({ type: 'test', message: '✅ Prueba de conexión exitosa' }, 'sensor-data');
+                } else {
+                    addMessage({ type: 'test', message: '❌ Prueba de conexión fallida' }, 'alert');
+                }
+            }, 2000);
+        }
+
+        function testSubscription() {
+            if (!isConnected) {
+                connect();
+                setTimeout(() => {
+                    subscribe();
+                    setTimeout(() => {
+                        addMessage({ type: 'test', message: '✅ Prueba de suscripción completada' }, 'sensor-data');
+                    }, 1000);
+                }, 1000);
+            } else {
+                subscribe();
+            }
+        }
+
+        function testPing() {
+            if (!isConnected) {
+                connect();
+                setTimeout(() => {
+                    ping();
+                }, 1000);
+            } else {
+                ping();
+            }
+        }
+
+        function testFullFlow() {
+            clearMessages();
+            addMessage({ type: 'test', message: '🚀 Iniciando prueba completa...' }, 'sensor-data');
+            
+            // 1. Conectar
+            connect();
+            
+            setTimeout(() => {
+                // 2. Suscribirse
+                subscribe();
+                
+                setTimeout(() => {
+                    // 3. Hacer ping
+                    ping();
+                    
+                    setTimeout(() => {
+                        // 4. Desconectar
+                        disconnect();
+                        addMessage({ type: 'test', message: '✅ Prueba completa completada' }, 'sensor-data');
+                    }, 1000);
+                }, 1000);
+            }, 1000);
+        }
+    </script>
+</body>
+</html> 

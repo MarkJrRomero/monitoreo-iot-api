@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { login, ingestData } = require('../controllers/api.controller');
+const { login, ingestData, getSensorData, getVehicleStats, getActiveAlerts } = require('../controllers/api.controller');
 const { authMiddleware } = require('../middlewares/auth.middleware');
 
 /**
@@ -95,5 +95,85 @@ router.post('/login', login);
  */
 router.post('/ingesta', authMiddleware, ingestData);
 
+/**
+ * @swagger
+ * /sensores/{vehicleId}:
+ *   get:
+ *     summary: Obtener datos de sensores
+ *     description: Obtiene los datos de sensores de un vehículo específico
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: vehicleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del vehículo
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *         description: Número máximo de registros a retornar
+ *     responses:
+ *       200:
+ *         description: Datos de sensores
+ *       404:
+ *         description: Vehículo no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/sensores/:vehicleId', authMiddleware, getSensorData);
+
+/**
+ * @swagger
+ * /stats/{vehicleId}:
+ *   get:
+ *     summary: Obtener estadísticas del vehículo
+ *     description: Obtiene estadísticas de los últimos 24 horas de un vehículo
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: vehicleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del vehículo
+ *     responses:
+ *       200:
+ *         description: Estadísticas del vehículo
+ *       404:
+ *         description: Vehículo no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/stats/:vehicleId', authMiddleware, getVehicleStats);
+
+/**
+ * @swagger
+ * /alerts/{vehicleId}:
+ *   get:
+ *     summary: Obtener alertas activas
+ *     description: Obtiene las alertas activas de un vehículo en la última hora
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: vehicleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del vehículo
+ *     responses:
+ *       200:
+ *         description: Alertas activas
+ *       404:
+ *         description: Vehículo no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/alerts/:vehicleId', authMiddleware, getActiveAlerts);
 
 module.exports = router;
