@@ -77,11 +77,32 @@
             background-color: #e3f2fd;
             border-radius: 4px;
         }
+        .auth-section {
+            background-color: #e8f5e8;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .debug-info {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔌 Test WebSocket - Monitoreo IoT</h1>
+        
+        <div class="auth-section">
+            <h3>🔐 Autenticación</h3>
+            <input type="text" id="email" placeholder="Email" value="admin@demo.com">
+            <input type="password" id="password" placeholder="Password" value="12345">
+            <button onclick="login()">Login</button>
+            <span id="authStatus">No autenticado</span>
+        </div>
         
         <div class="controls">
             <h3>Configuración</h3>
@@ -92,18 +113,26 @@
             <button onclick="unsubscribe()">Desuscribirse</button>
             <button onclick="ping()">Ping</button>
             <button onclick="clearMessages()">Limpiar Mensajes</button>
+            <button onclick="checkStats()">Ver Estadísticas</button>
         </div>
 
         <div id="status" class="status disconnected">
             Estado: Desconectado
         </div>
 
+        <div class="debug-info" id="debugInfo">
+            <strong>Debug Info:</strong><br>
+            Autenticado: <span id="authStatus">No</span><br>
+            Usuario: <span id="userInfo">-</span><br>
+            WebSocket: <span id="wsStatus">No conectado</span><br>
+            Suscrito a: <span id="subscribedTo">Ninguno</span><br>
+            Mensajes enviados: <span id="sentCount">0</span><br>
+            Mensajes recibidos: <span id="receivedCount">0</span>
+        </div>
+
         <div class="test-section">
             <h3>🧪 Pruebas Automáticas</h3>
-            <button onclick="testConnection()">Probar Conexión</button>
-            <button onclick="testSubscription()">Probar Suscripción</button>
-            <button onclick="testPing()">Probar Ping</button>
-            <button onclick="testFullFlow()">Prueba Completa</button>
+            <button onclick="testFullFlow()">Prueba Completa (Login + Connect + Subscribe)</button>
         </div>
 
         <div class="controls">
@@ -115,6 +144,12 @@
     <script>
         let ws = null;
         let isConnected = false;
+        let isAuthenticated = false;
+        let authToken = null;
+        let userInfo = null;
+        let sentCount = 0;
+        let receivedCount = 0;
+        let subscribedVehicle = null;
 
         function updateStatus(message, isConnected) {
             const status = document.getElementById('status');
@@ -134,21 +169,59 @@
             messages.scrollTop = messages.scrollHeight;
         }
 
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ correo: email, password: password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.token) {
+                    authToken = data.token;
+                    userInfo = data.usuario;
+                    isAuthenticated = true;
+                    document.getElementById('authStatus').textContent = 'Autenticado';
+                    document.getElementById('userInfo').textContent = `${userInfo.nombre} (${userInfo.rol})`;
+                    addMessage({ type: 'auth', message: 'Login exitoso', user: userInfo }, 'sensor-data');
+                } else {
+                    addMessage({ type: 'error', message: 'Login fallido', error: data.error }, 'alert');
+                }
+            } catch (error) {
+                addMessage({ type: 'error', message: 'Error en login', error: error }, 'alert');
+            }
+        }
+
         function connect() {
+            if (!isAuthenticated) {
+                alert('Debes hacer login primero');
+                return;
+            }
+            
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const host = window.location.host;
-            const wsUrl = `${protocol}//${host}`;
+            const wsUrl = `${protocol}//${host}?token=${authToken}`;
             
             console.log('Conectando a:', wsUrl);
+            addMessage({ type: 'debug', message: `Conectando a ${wsUrl}` }, 'sensor-data');
+            
             ws = new WebSocket(wsUrl);
 
             ws.onopen = function() {
                 isConnected = true;
-                updateStatus('Conectado', true);
-                addMessage({ type: 'connection', message: 'Conexión establecida' }, 'sensor-data');
+                updateStatus('Conectado y autenticado', true);
+                addMessage({ type: 'connection', message: 'Conexión establecida y autenticada' }, 'sensor-data');
             };
 
             ws.onmessage = function(event) {
+                console.log('Mensaje recibido:', event.data);
                 try {
                     const data = JSON.parse(event.data);
                     addMessage(data, data.type === 'alert' ? 'alert' : 'sensor-data');
@@ -157,10 +230,16 @@
                 }
             };
 
-            ws.onclose = function() {
+            ws.onclose = function(event) {
                 isConnected = false;
+                subscribedVehicle = null;
                 updateStatus('Desconectado', false);
-                addMessage({ type: 'disconnection', message: 'Conexión cerrada' }, 'alert');
+                addMessage({ 
+                    type: 'disconnection', 
+                    message: 'Conexión cerrada',
+                    code: event.code,
+                    reason: event.reason
+                }, 'alert');
             };
 
             ws.onerror = function(error) {
@@ -190,12 +269,15 @@
 
             const message = {
                 type: 'subscribe',
-                vehicleId: vehicleId,
-                userId: 'test-user'
+                vehicleId: vehicleId
             };
 
+            console.log('Enviando suscripción:', message);
             ws.send(JSON.stringify(message));
-            addMessage({ type: 'sent', message: 'Suscripción enviada', data: message }, 'sensor-data');
+            sentCount++;
+            subscribedVehicle = vehicleId;
+            addMessage({ type: 'sent', message: 'Suscripción enviada', data: message }, 'sent');
+            updateDebugInfo();
         }
 
         function unsubscribe() {
@@ -227,6 +309,49 @@
 
         function clearMessages() {
             document.getElementById('messages').innerHTML = '';
+        }
+
+        function updateDebugInfo() {
+            const debugInfo = document.getElementById('debugInfo');
+            debugInfo.innerHTML = `
+                <strong>Debug Info:</strong><br>
+                Autenticado: <span id="authStatus">${isAuthenticated ? 'Sí' : 'No'}</span><br>
+                Usuario: <span id="userInfo">${userInfo ? `${userInfo.nombre} (${userInfo.rol})` : '-'}</span><br>
+                WebSocket: <span id="wsStatus">${isConnected ? 'Conectado' : 'Desconectado'}</span><br>
+                Suscrito a: <span id="subscribedTo">${subscribedVehicle || 'Ninguno'}</span><br>
+                Mensajes enviados: <span id="sentCount">${sentCount}</span><br>
+                Mensajes recibidos: <span id="receivedCount">${receivedCount}</span>
+            `;
+        }
+
+        function checkStats() {
+            if (!isConnected) {
+                alert('Debes estar conectado para ver estadísticas.');
+                return;
+            }
+            if (!userInfo) {
+                alert('No hay información de usuario disponible.');
+                return;
+            }
+            fetch('/api/websocket/stats', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ userId: userInfo.id })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addMessage({ type: 'stats', message: 'Estadísticas obtenidas', data: data.stats }, 'sensor-data');
+                } else {
+                    addMessage({ type: 'error', message: 'Error al obtener estadísticas', error: data.error }, 'alert');
+                }
+            })
+            .catch(error => {
+                addMessage({ type: 'error', message: 'Error en la solicitud de estadísticas', error: error }, 'alert');
+            });
         }
 
         // Funciones de prueba automática
@@ -269,25 +394,39 @@
 
         function testFullFlow() {
             clearMessages();
-            addMessage({ type: 'test', message: '🚀 Iniciando prueba completa...' }, 'sensor-data');
+            addMessage({ type: 'test', message: '🚀 Iniciando prueba completa con autenticación...' }, 'sensor-data');
             
-            // 1. Conectar
-            connect();
+            // 1. Login
+            login();
             
             setTimeout(() => {
-                // 2. Suscribirse
-                subscribe();
-                
-                setTimeout(() => {
-                    // 3. Hacer ping
-                    ping();
+                if (isAuthenticated) {
+                    // 2. Conectar
+                    connect();
                     
                     setTimeout(() => {
-                        // 4. Desconectar
-                        disconnect();
-                        addMessage({ type: 'test', message: '✅ Prueba completa completada' }, 'sensor-data');
+                        // 3. Suscribirse
+                        subscribe();
+                        
+                        setTimeout(() => {
+                            // 4. Ping
+                            ping();
+                            
+                            setTimeout(() => {
+                                // 5. Verificar estadísticas
+                                checkStats();
+                                
+                                setTimeout(() => {
+                                    // 6. Desconectar
+                                    disconnect();
+                                    addMessage({ type: 'test', message: '✅ Prueba completa completada' }, 'sensor-data');
+                                }, 1000);
+                            }, 1000);
+                        }, 1000);
                     }, 1000);
-                }, 1000);
+                } else {
+                    addMessage({ type: 'test', message: '❌ Login fallido' }, 'alert');
+                }
             }, 1000);
         }
     </script>
