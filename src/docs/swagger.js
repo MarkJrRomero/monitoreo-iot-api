@@ -5,11 +5,12 @@ const swaggerDefinition = {
   info: {
     title: 'API Monitoreo IoT',
     version: '1.0.0',
-    description: 'Documentación de la API para monitoreo de flotas vehiculares',
+    description: 'Documentación de la API para monitoreo de flotas vehiculares con WebSocket en tiempo real',
   },
   servers: [
     {
       url: 'http://localhost:3000/api',
+      description: 'Servidor de desarrollo'
     },
   ],
   components: {
@@ -21,6 +22,24 @@ const swaggerDefinition = {
       },
     },
   },
+  tags: [
+    {
+      name: 'Autenticación',
+      description: 'Endpoints para gestión de usuarios y autenticación'
+    },
+    {
+      name: 'Sensores',
+      description: 'Endpoints para gestión de datos de sensores y alertas'
+    },
+    {
+      name: 'Vehículos',
+      description: 'Endpoints para gestión de vehículos y posicionamiento'
+    },
+    {
+      name: 'WebSocket',
+      description: 'Endpoints para estadísticas de WebSocket'
+    }
+  ]
 };
 
 const options = {
@@ -29,4 +48,5 @@ const options = {
 };
 
 const swaggerSpec = swaggerJSDoc(options);
+
 module.exports = swaggerSpec;

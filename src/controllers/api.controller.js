@@ -39,6 +39,8 @@ exports.login = async (req, res) => {
 exports.ingestData = async (req, res) => {
   const { vehiculo_id, gps, combustible, temperatura, velocidad, latitud, longitud } = req.body;
 
+  console.log('🚀 Iniciando ingesta de datos:', { vehiculo_id, gps, combustible, temperatura, velocidad, latitud, longitud });
+
   if (!vehiculo_id || !gps || combustible === null || temperatura === null || velocidad === null || latitud === null || longitud === null) {
     return res.status(400).json({ error: 'Faltan datos obligatorios' });
   }
@@ -47,6 +49,8 @@ exports.ingestData = async (req, res) => {
     const vehiculo = await sql`
       SELECT id FROM vehiculos WHERE dispositivo_id = ${vehiculo_id}
     `;
+
+    console.log('🔍 Vehículo encontrado:', vehiculo);
 
     if (!vehiculo.length) {
       return res.status(404).json({ error: 'Vehículo no encontrado' });
@@ -82,6 +86,8 @@ exports.ingestData = async (req, res) => {
       estado = 'normal';
     }
 
+    console.log('📊 Estado calculado:', estado);
+
     const sensorData = {
       vehiculo_id: vehiculo[0].id,
       dispositivo_id: vehiculo_id,
@@ -95,54 +101,93 @@ exports.ingestData = async (req, res) => {
       timestamp: new Date().toISOString()
     };
 
+    console.log(' Guardando datos en BD:', sensorData);
 
+    // Insertar en la base de datos
     await sql`
       INSERT INTO sensores (vehiculo_id, gps, combustible, temperatura, velocidad, latitud, longitud, estado)
-      VALUES (${sensorData.vehiculo_id}, ${sensorData.gps}, ${sensorData.combustible}, ${sensorData.temperatura}, ${sensorData.velocidad}, ${sensorData.latitud}, ${sensorData.longitud}, ${sensorData.estado})
+      VALUES (${sensorData.vehiculo_id}, ${gps}, ${combustible}, ${temperatura}, ${velocidad}, ${latitud}, ${longitud}, ${estado})
     `;
+
+    console.log('✅ Datos guardados en BD exitosamente');
+
+    // Verificar estadísticas del WebSocket antes de enviar
+    const stats = websocketService.getStats();
+    console.log('📡 Estadísticas WebSocket antes de enviar:', stats);
 
     // Enviar datos en tiempo real por WebSocket
     try {
+      console.log('🔌 Intentando enviar datos por WebSocket para vehículo:', vehiculo_id);
       await websocketService.broadcastSensorData(vehiculo_id, sensorData);
-      console.log(`Datos enviados por WebSocket para vehículo ${vehiculo_id}`);
+      console.log(`✅ Datos enviados por WebSocket para vehículo ${vehiculo_id}`);
     } catch (wsError) {
-      console.error('Error enviando datos por WebSocket:', wsError);
-      // No fallar la respuesta HTTP si WebSocket falla
+      console.error('❌ Error enviando datos por WebSocket:', wsError);
     }
 
     // Si hay alertas, enviarlas también por WebSocket
     if (estado !== 'normal') {
       try {
+        console.log('🚨 Enviando alerta por WebSocket para vehículo:', vehiculo_id);
         await websocketService.broadcastAlert(vehiculo_id, {
           tipo: estado,
           datos: sensorData,
           timestamp: new Date().toISOString()
         });
-        console.log(`Alerta enviada por WebSocket para vehículo ${vehiculo_id}`);
+        console.log(`✅ Alerta enviada por WebSocket para vehículo ${vehiculo_id}`);
       } catch (alertError) {
-        console.error('Error enviando alerta por WebSocket:', alertError);
+        console.error('❌ Error enviando alerta por WebSocket:', alertError);
       }
     }
 
-    res.json({ ok: true, data: { vehiculo_id, gps, combustible, temperatura, velocidad, latitud, longitud, estado } });
+    // Verificar estadísticas después de enviar
+    const statsAfter = websocketService.getStats();
+    console.log('📡 Estadísticas WebSocket después de enviar:', statsAfter);
+
+    res.json({ 
+      ok: true, 
+      data: { 
+        vehiculo_id, 
+        gps, 
+        combustible, 
+        temperatura, 
+        velocidad, 
+        latitud, 
+        longitud, 
+        estado 
+      },
+      websocket_sent: true,
+      websocket_stats: statsAfter
+    });
   } catch (err) {
-    console.error('Error en ingesta:', err);
+    console.error('❌ Error en ingesta:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
 
-
+// Endpoint para obtener datos de sensores
 exports.getSensorData = async (req, res) => {
   const { vehicleId } = req.params;
   const { limit = 100 } = req.query;
 
   try {
-    const vehicleExists = await sensoresService.vehicleExists(vehicleId);
-    if (!vehicleExists) {
+    // Verificar si el vehículo existe
+    const vehiculo = await sql`
+      SELECT id FROM vehiculos WHERE dispositivo_id = ${vehicleId}
+    `;
+    
+    if (!vehiculo.length) {
       return res.status(404).json({ error: 'Vehículo no encontrado' });
     }
 
-    const sensorData = await sensoresService.getSensorDataByVehicle(vehicleId, limit);
+    // Obtener datos de sensores
+    const sensorData = await sql`
+      SELECT s.*, v.dispositivo_id, v.nombre as vehiculo_nombre
+      FROM sensores s
+      JOIN vehiculos v ON s.vehiculo_id = v.id
+      WHERE v.dispositivo_id = ${vehicleId}
+      ORDER BY s.timestamp DESC
+      LIMIT ${limit}
+    `;
     
     res.json({
       ok: true,
@@ -159,16 +204,34 @@ exports.getVehicleStats = async (req, res) => {
   const { vehicleId } = req.params;
 
   try {
-    const vehicleExists = await sensoresService.vehicleExists(vehicleId);
-    if (!vehicleExists) {
+    // Verificar si el vehículo existe
+    const vehiculo = await sql`
+      SELECT id FROM vehiculos WHERE dispositivo_id = ${vehicleId}
+    `;
+    
+    if (!vehiculo.length) {
       return res.status(404).json({ error: 'Vehículo no encontrado' });
     }
 
-    const stats = await sensoresService.getVehicleStats(vehicleId);
+    // Obtener estadísticas
+    const stats = await sql`
+      SELECT 
+        COUNT(*) as total_lecturas,
+        AVG(combustible) as promedio_combustible,
+        AVG(temperatura) as promedio_temperatura,
+        AVG(velocidad) as promedio_velocidad,
+        MAX(temperatura) as max_temperatura,
+        MIN(combustible) as min_combustible,
+        MAX(velocidad) as max_velocidad
+      FROM sensores s
+      JOIN vehiculos v ON s.vehiculo_id = v.id
+      WHERE v.dispositivo_id = ${vehicleId}
+      AND s.timestamp >= NOW() - INTERVAL '24 hours'
+    `;
     
     res.json({
       ok: true,
-      data: stats
+      data: stats[0]
     });
   } catch (error) {
     console.error('Error obteniendo estadísticas:', error);
@@ -181,12 +244,25 @@ exports.getActiveAlerts = async (req, res) => {
   const { vehicleId } = req.params;
 
   try {
-    const vehicleExists = await sensoresService.vehicleExists(vehicleId);
-    if (!vehicleExists) {
+    // Verificar si el vehículo existe
+    const vehiculo = await sql`
+      SELECT id FROM vehiculos WHERE dispositivo_id = ${vehicleId}
+    `;
+    
+    if (!vehiculo.length) {
       return res.status(404).json({ error: 'Vehículo no encontrado' });
     }
 
-    const alerts = await sensoresService.getActiveAlerts(vehicleId);
+    // Obtener alertas activas
+    const alerts = await sql`
+      SELECT s.*, v.dispositivo_id, v.nombre as vehiculo_nombre
+      FROM sensores s
+      JOIN vehiculos v ON s.vehiculo_id = v.id
+      WHERE v.dispositivo_id = ${vehicleId}
+      AND s.estado != 'normal'
+      AND s.timestamp >= NOW() - INTERVAL '1 hour'
+      ORDER BY s.timestamp DESC
+    `;
     
     res.json({
       ok: true,
@@ -335,6 +411,20 @@ exports.getVehicleAlertHistory = async (req, res) => {
     });
   } catch (error) {
     console.error('Error obteniendo historial de alertas:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// Endpoint para verificar estado del WebSocket
+exports.getWebSocketStats = async (req, res) => {
+  try {
+    const stats = websocketService.getStats();
+    res.json({
+      ok: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error obteniendo estadísticas WebSocket:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
