@@ -1,12 +1,39 @@
 const { createToken } = require('../utils/jwt');
+const sql = require('../db.js');
+const bcrypt = require('bcrypt');
 
-exports.login = (req, res) => {
-  const { user, password } = req.body;
-  if (user === 'admin' && password === '1234') {
-    const token = createToken({ user, role: 'admin' }, process.env.JWT_SECRET, 3600000);
-    return res.json({ token });
+
+exports.login = async (req, res) => {
+  const { correo, password } = req.body;
+  
+  try {
+    const result = await sql`
+      SELECT id, nombre, correo, password, rol
+      FROM usuarios
+      WHERE correo = ${correo}
+    `;
+
+    const usuario = result[0];
+    if (!usuario) {
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
+    }
+
+    const valid = await bcrypt.compare(password, usuario.password);
+    if (!valid) {
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
+    }
+
+    const token = createToken(
+      { id: usuario.id, correo: usuario.correo, rol: usuario.rol },
+      process.env.JWT_SECRET,
+      3600000
+    );
+
+    res.json({ usuario: {nombre: usuario.nombre, correo: usuario.correo, rol: usuario.rol}, token });
+  } catch (err) {
+    console.error('Error en login:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
-  return res.status(401).json({ error: 'Credenciales inválidas' });
 };
 
 exports.ingestData = (req, res) => {
