@@ -3,12 +3,17 @@ const express = require('express');
 const app = express();
 const http = require('http');
 const WebSocket = require('ws');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./docs/swagger');
 
 app.use(express.json());
 
 // Rutas
 const apiRoutes = require('./routes/api.routes');
 app.use('/api', apiRoutes);
+
+// Documentación Swagger
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Servidor HTTP y WebSocket
 const server = http.createServer(app);

@@ -33,6 +33,15 @@ npm install express pg ws dotenv
 npm install --save-dev nodemon
 ```
 
+### 4. Documentación API
+```bash
+npm install swagger-ui-express swagger-jsdoc
+```
+
+#### Documentación con Swagger
+- **swagger-ui-express**: Interfaz web para visualizar la documentación de la API
+- **swagger-jsdoc**: Genera especificaciones OpenAPI a partir de comentarios JSDoc en el código
+
 ## 📁 Estructura del Proyecto
 
 ### Organización de Carpetas
@@ -91,6 +100,7 @@ Seguir las instrucciones oficiales de conexión de Supabase para configurar la c
 5. Implementar WebSocket para tiempo real
 6. Agregar middlewares de autenticación
 7. Configurar validaciones de datos
+8. Configurar documentación API con Swagger
 
 ## 📋 Checklist de Implementación
 
@@ -101,8 +111,9 @@ Seguir las instrucciones oficiales de conexión de Supabase para configurar la c
 - [X] Variables de entorno configuradas
 - [X] Servidor Express básico funcionando
 - [X] Rutas API implementadas
-- [ ] WebSocket implementado
+- [X] WebSocket implementado
 - [ ] Autenticación configurada
+- [X] Documentación API configurada
 - [ ] Tests implementados
 
 ---

@@ -23,6 +23,8 @@
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
     "postgres": "^3.4.7",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "ws": "^8.18.3"
   },
   "devDependencies": {
