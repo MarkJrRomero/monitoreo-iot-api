@@ -33,7 +33,7 @@ exports.login = async (req, res) => {
     const token = createToken(
       { id: usuario.id, correo: usuario.correo, rol: usuario.rol },
       process.env.JWT_SECRET,
-      3600000
+      86400000
     );
 
     res.json({ usuario: {nombre: usuario.nombre, correo: usuario.correo, rol: usuario.rol}, token });
@@ -54,7 +54,7 @@ exports.ingestData = async (req, res) => {
 
   try {
     const vehiculo = await sql`
-      SELECT id FROM vehiculos WHERE dispositivo_id = ${vehiculo_id}
+      SELECT * FROM vehiculos WHERE dispositivo_id = ${vehiculo_id}
     `;
 
     console.log('🔍 Vehículo encontrado:', vehiculo);
@@ -97,6 +97,7 @@ exports.ingestData = async (req, res) => {
 
     const sensorData = {
       vehiculo_id: vehiculo[0].id,
+      nombre: vehiculo[0].nombre,
       dispositivo_id: vehiculo_id,
       gps,
       combustible,
@@ -154,6 +155,7 @@ exports.ingestData = async (req, res) => {
       ok: true, 
       data: { 
         vehiculo_id, 
+        nombre: vehiculo[0].nombre,
         gps, 
         combustible, 
         temperatura, 

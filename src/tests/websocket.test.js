@@ -22,6 +22,13 @@ jest.mock('../db.js', () => {
   });
 });
 
+// Crear token de prueba
+const token = createToken(
+  { id: 1, rol: "admin", correo: "admin@demo.com" },
+  process.env.JWT_SECRET,
+  3600000
+);
+
 const apiRoutes = require('../routes/api.routes');
 const websocketService = require('../services/websocket.service');
 
@@ -53,7 +60,7 @@ describe('WebSocket Tests', () => {
 
   test('debe conectarse al WebSocket', (done) => {
     const port = server.address().port;
-    const ws = new WebSocket(`ws://localhost:${port}`);
+    const ws = new WebSocket(`ws://localhost:${port}?token=${token}`);
     
     ws.on('open', () => {
       expect(ws.readyState).toBe(WebSocket.OPEN);
@@ -69,13 +76,13 @@ describe('WebSocket Tests', () => {
 
   test('debe recibir mensaje de bienvenida', (done) => {
     const port = server.address().port;
-    const ws = new WebSocket(`ws://localhost:${port}`);
+    const ws = new WebSocket(`ws://localhost:${port}?token=${token}`);
     
     ws.on('message', (data) => {
       try {
         const message = JSON.parse(data);
         expect(message.type).toBe('connection');
-        expect(message.message).toBe('Conexión establecida');
+        expect(message.message).toBe('Conexión establecida y autenticada');
         ws.close();
         done();
       } catch (error) {
@@ -91,7 +98,7 @@ describe('WebSocket Tests', () => {
 
   test('debe suscribirse a un vehículo', (done) => {
     const port = server.address().port;
-    const ws = new WebSocket(`ws://localhost:${port}`);
+    const ws = new WebSocket(`ws://localhost:${port}?token=${token}`);
     
     ws.on('open', () => {
       const subscribeMessage = {
@@ -125,7 +132,7 @@ describe('WebSocket Tests', () => {
 
   test('debe responder a ping', (done) => {
     const port = server.address().port;
-    const ws = new WebSocket(`ws://localhost:${port}`);
+    const ws = new WebSocket(`ws://localhost:${port}?token=${token}`);
     
     ws.on('open', () => {
       const pingMessage = { type: 'ping' };
