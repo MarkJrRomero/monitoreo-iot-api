@@ -4,7 +4,14 @@ const bcrypt = require('bcrypt');
 const websocketService = require('../services/websocket.service');
 
 exports.login = async (req, res) => {
+
+  console.log('🔍 Datos recibidos:', req.body);
+  
   const { correo, password } = req.body;
+
+  if (!correo || !password) {
+    return res.status(400).json({ error: 'Faltan datos obligatorios' });
+  }
   
   try {
     const result = await sql`

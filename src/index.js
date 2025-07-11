@@ -7,8 +7,16 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./docs/swagger');
 const websocketService = require('./services/websocket.service');
 const path = require('path');
+const cors = require('cors');
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Configurar CORS - debe ir antes de las rutas
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
 
 // Servir archivos estáticos desde la carpeta public
 app.use(express.static(path.join(__dirname, '../public')));
@@ -22,7 +30,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Servidor HTTP y WebSocket
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server }); // Ahora debería funcionar
+const wss = new WebSocket.Server({ server });
 
 // Inicializar servicio WebSocket
 websocketService.initialize(wss);

@@ -3,15 +3,6 @@ const bcrypt = require('bcrypt');
 const sql = require('../db.js');
 
 describe('Creación de Usuarios', () => {
-  let userIds = [];
-
-  afterAll(async () => {
-    // Limpiar todos los usuarios creados después de las pruebas
-    for (const userId of userIds) {
-      await sql`DELETE FROM usuarios WHERE id = ${userId}`;
-    }
-    await sql.end();
-  });
 
   test('debe crear un usuario administrador con contraseña hasheada', async () => {
     const passwordPlano = '12345';
@@ -24,7 +15,6 @@ describe('Creación de Usuarios', () => {
     `;
 
     const userId = result[0].id;
-    userIds.push(userId);
 
     // Verificar que el usuario se creó correctamente
     expect(result).toHaveLength(1);
@@ -65,7 +55,6 @@ describe('Creación de Usuarios', () => {
       `;
 
       const userId = result[0].id;
-      userIds.push(userId);
 
       // Verificar que el usuario se creó correctamente
       expect(result).toHaveLength(1);
