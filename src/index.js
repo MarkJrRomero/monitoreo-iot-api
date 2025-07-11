@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const http = require('http');
-const WebSocket = require('ws'); // Corregir esta línea
+const WebSocket = require('ws');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./docs/swagger');
 const websocketService = require('./services/websocket.service');

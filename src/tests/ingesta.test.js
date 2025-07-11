@@ -12,13 +12,13 @@ jest.mock("../db.js", () => {
     }, '');
     
     // Mock para consulta de vehículo
-    if (query.includes("SELECT id FROM vehiculos")) {
+    if (query.includes("SELECT * FROM vehiculos")) {
       return Promise.resolve([{ id: 1 }]);
     }
     
     // Mock para inserción de sensores
     if (query.includes("INSERT INTO sensores")) {
-      return Promise.resolve([{ id: 1 }]);
+      return Promise.resolve([{ id: 135 }]);
     }
     
     return Promise.resolve([]);
@@ -29,7 +29,7 @@ const apiRoutes = require("../routes/api.routes");
 
 // Crear token de prueba
 const token = createToken(
-  { id: 1, rol: "admin", correo: "admin@demo.com" },
+  {rol: "tester", correo: "testing@demo.com" },
   process.env.JWT_SECRET,
   3600000
 );
@@ -50,7 +50,7 @@ describe("POST /api/ingesta", () => {
       .set("Authorization", `Bearer ${token}`)
       .set("Content-Type", "application/json")
       .send({
-        vehiculo_id: "VH1ZU432E",
+        vehiculo_id: "VEH334345SDF",
         gps: "ABC123",
         combustible: 5,
         temperatura: 95,
@@ -68,6 +68,52 @@ describe("POST /api/ingesta", () => {
     expect(res.body.data).toHaveProperty("estado");
   });
 
+  it("debería retornar 400 si faltan datos obligatorios", async () => {
+    const res = await request(app)
+      .post("/api/ingesta")
+      .set("Authorization", `Bearer ${token}`)
+      .send({});
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toHaveProperty("error", "Faltan datos obligatorios");
+  });
+
+  it("debería retornar 401 si no se proporciona token", async () => {
+    const res = await request(app)
+      .post("/api/ingesta")
+      .set("Content-Type", "application/json")
+      .send({
+        vehiculo_id: "VH1ZU432E",
+        gps: "ABC123",
+        combustible: 5,
+        temperatura: 95,
+        velocidad: 100,
+        latitud: 6.25184,
+        longitud: -75.56359,
+      });
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body).toHaveProperty("error", "Sin token");
+  });
+
+  it("debería retornar 403 si el token es inválido", async () => {
+    const res = await request(app)
+      .post("/api/ingesta")
+      .set("Authorization", "Bearer invalid-token")
+      .set("Content-Type", "application/json")
+      .send({
+        vehiculo_id: "VH1ZU432E",
+        gps: "ABC123",
+        combustible: 5,
+        temperatura: 95,
+        velocidad: 100,
+        latitud: 6.25184,
+        longitud: -75.56359,
+      });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toHaveProperty("error", "Token inválido o expirado");
+  });
   it("debería retornar 400 si faltan datos obligatorios", async () => {
     const res = await request(app)
       .post("/api/ingesta")

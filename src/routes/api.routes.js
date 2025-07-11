@@ -13,6 +13,7 @@ const {
   getVehicleAlertHistory
 } = require('../controllers/api.controller');
 const { authMiddleware } = require('../middlewares/auth.middleware');
+const simulatorRoutes = require('./simulator.routes');
 
 /**
  * @swagger
@@ -410,6 +411,9 @@ router.get('/stats/:vehicleId', authMiddleware, getVehicleStats);
  *       500:
  *         description: Error interno del servidor
  */
-router.get('/websocket/stats', getWebSocketStats);
+router.get('/websocket/stats', authMiddleware, getWebSocketStats);
+
+// Rutas del simulador
+router.use('/simulador', simulatorRoutes);
 
 module.exports = router;
