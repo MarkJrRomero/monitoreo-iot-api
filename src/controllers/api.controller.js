@@ -437,3 +437,262 @@ exports.getWebSocketStats = async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
+// ===== CRUD DE VEHÍCULOS SIMPLIFICADO =====
+
+// Crear nuevo vehículo
+exports.createVehicle = async (req, res) => {
+  const { nombre, dispositivo_id, usuario_id } = req.body;
+
+  console.log('🚗 Creando vehículo:', { nombre, dispositivo_id, usuario_id });
+
+  if (!nombre || !dispositivo_id) {
+    return res.status(400).json({ error: 'Faltan datos obligatorios: nombre y dispositivo_id' });
+  }
+
+  try {
+    // Verificar si el dispositivo_id ya existe
+    const existingVehicle = await sql`
+      SELECT id FROM vehiculos WHERE dispositivo_id = ${dispositivo_id}
+    `;
+
+    if (existingVehicle.length > 0) {
+      return res.status(409).json({ error: 'Ya existe un vehículo con este dispositivo_id' });
+    }
+
+    // Crear el vehículo
+    const newVehicle = await sql`
+      INSERT INTO vehiculos (nombre, dispositivo_id, usuario_id)
+      VALUES (${nombre}, ${dispositivo_id}, ${usuario_id || null})
+      RETURNING id, nombre, dispositivo_id, usuario_id
+    `;
+
+    console.log('✅ Vehículo creado:', newVehicle[0]);
+
+    res.status(201).json({
+      ok: true,
+      message: 'Vehículo creado correctamente',
+      data: newVehicle[0]
+    });
+  } catch (err) {
+    console.error('❌ Error creando vehículo:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// Obtener todos los vehículos (con paginación)
+exports.getVehicles = async (req, res) => {
+  const { page = 1, limit = 10, search = '' } = req.query;
+  const offset = (page - 1) * limit;
+
+  try {
+    let vehicles;
+    let totalCount;
+
+    if (search) {
+      // Búsqueda con filtro
+      vehicles = await sql`
+        SELECT 
+          v.id,
+          v.nombre,
+          v.dispositivo_id,
+          v.usuario_id,
+          u.nombre as usuario_nombre
+        FROM vehiculos v
+        LEFT JOIN usuarios u ON v.usuario_id = u.id
+        WHERE v.nombre ILIKE ${'%' + search + '%'} 
+           OR v.dispositivo_id ILIKE ${'%' + search + '%'}
+        ORDER BY v.id DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+
+      totalCount = await sql`
+        SELECT COUNT(*) as total
+        FROM vehiculos v
+        WHERE v.nombre ILIKE ${'%' + search + '%'} 
+           OR v.dispositivo_id ILIKE ${'%' + search + '%'}
+      `;
+    } else {
+      // Sin filtro
+      vehicles = await sql`
+        SELECT 
+          v.id,
+          v.nombre,
+          v.dispositivo_id,
+          v.usuario_id,
+          u.nombre as usuario_nombre
+        FROM vehiculos v
+        LEFT JOIN usuarios u ON v.usuario_id = u.id
+        ORDER BY v.id DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+
+      totalCount = await sql`
+        SELECT COUNT(*) as total FROM vehiculos
+      `;
+    }
+
+    const total = parseInt(totalCount[0].total);
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      ok: true,
+      data: vehicles,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    });
+  } catch (error) {
+    console.error('Error obteniendo vehículos:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// Obtener vehículo por ID
+exports.getVehicleById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const vehicle = await sql`
+      SELECT 
+        v.id,
+        v.nombre,
+        v.dispositivo_id,
+        v.usuario_id,
+        u.nombre as usuario_nombre
+      FROM vehiculos v
+      LEFT JOIN usuarios u ON v.usuario_id = u.id
+      WHERE v.id = ${id}
+    `;
+
+    if (!vehicle.length) {
+      return res.status(404).json({ error: 'Vehículo no encontrado' });
+    }
+
+    res.json({
+      ok: true,
+      data: vehicle[0]
+    });
+  } catch (error) {
+    console.error('Error obteniendo vehículo:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// Actualizar vehículo
+exports.updateVehicle = async (req, res) => {
+  const { id } = req.params;
+  const { nombre, dispositivo_id, usuario_id } = req.body;
+
+  console.log('🔄 Actualizando vehículo:', { id, nombre, dispositivo_id, usuario_id });
+
+  if (!nombre && !dispositivo_id && usuario_id === undefined) {
+    return res.status(400).json({ error: 'Debe proporcionar al menos un campo para actualizar' });
+  }
+
+  try {
+    // Verificar si el vehículo existe
+    const existingVehicle = await sql`
+      SELECT id FROM vehiculos WHERE id = ${id}
+    `;
+
+    if (!existingVehicle.length) {
+      return res.status(404).json({ error: 'Vehículo no encontrado' });
+    }
+
+    // Si se está actualizando el dispositivo_id, verificar que no exista otro con el mismo
+    if (dispositivo_id) {
+      const duplicateDevice = await sql`
+        SELECT id FROM vehiculos 
+        WHERE dispositivo_id = ${dispositivo_id} AND id != ${id}
+      `;
+
+      if (duplicateDevice.length > 0) {
+        return res.status(409).json({ error: 'Ya existe otro vehículo con este dispositivo_id' });
+      }
+    }
+
+    // Construir query de actualización dinámicamente
+    const updateFields = [];
+    const updateValues = [];
+
+    if (nombre !== undefined) {
+      updateFields.push('nombre = $' + (updateValues.length + 1));
+      updateValues.push(nombre);
+    }
+
+    if (dispositivo_id !== undefined) {
+      updateFields.push('dispositivo_id = $' + (updateValues.length + 1));
+      updateValues.push(dispositivo_id);
+    }
+
+    if (usuario_id !== undefined) {
+      updateFields.push('usuario_id = $' + (updateValues.length + 1));
+      updateValues.push(usuario_id);
+    }
+
+    const updateQuery = `
+      UPDATE vehiculos 
+      SET ${updateFields.join(', ')}
+      WHERE id = $${updateValues.length + 1}
+      RETURNING id, nombre, dispositivo_id, usuario_id
+    `;
+
+    updateValues.push(id);
+
+    const updatedVehicle = await sql.unsafe(updateQuery, updateValues);
+
+    console.log('✅ Vehículo actualizado:', updatedVehicle[0]);
+
+    res.json({
+      ok: true,
+      message: 'Vehículo actualizado correctamente',
+      data: updatedVehicle[0]
+    });
+  } catch (err) {
+    console.error('❌ Error actualizando vehículo:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+// Eliminar vehículo
+exports.deleteVehicle = async (req, res) => {
+  const { id } = req.params;
+
+  console.log('🗑️  Eliminando vehículo:', id);
+
+  try {
+    // Verificar si el vehículo existe
+    const existingVehicle = await sql`
+      SELECT id, nombre FROM vehiculos WHERE id = ${id}
+    `;
+
+    if (!existingVehicle.length) {
+      return res.status(404).json({ error: 'Vehículo no encontrado' });
+    }
+
+    // Eliminar el vehículo
+    await sql`
+      DELETE FROM vehiculos WHERE id = ${id}
+    `;
+
+    console.log('✅ Vehículo eliminado:', existingVehicle[0].nombre);
+
+    res.json({
+      ok: true,
+      message: 'Vehículo eliminado correctamente',
+      data: {
+        id: parseInt(id),
+        nombre: existingVehicle[0].nombre
+      }
+    });
+  } catch (err) {
+    console.error('❌ Error eliminando vehículo:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};

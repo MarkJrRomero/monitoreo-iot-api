@@ -10,7 +10,13 @@ const {
   getAllVehicles,
   getVehiclesWithAlerts,
   getAlertsSummary,
-  getVehicleAlertHistory
+  getVehicleAlertHistory,
+  createVehicle,
+  getVehicles,
+  getVehicleById,
+  updateVehicle,
+  deleteVehicle,
+  getVehicleDetailedStats
 } = require('../controllers/api.controller');
 const { authMiddleware } = require('../middlewares/auth.middleware');
 const simulatorRoutes = require('./simulator.routes');
@@ -415,5 +421,303 @@ router.get('/websocket/stats', authMiddleware, getWebSocketStats);
 
 // Rutas del simulador
 router.use('/simulador', simulatorRoutes);
+
+// ===== CRUD DE VEHÍCULOS =====
+
+
+/**
+ * @swagger
+ * /vehiculos:
+ *   post:
+ *     tags: [Vehículos]
+ *     summary: Crear un vehículo
+ *     description: Crea un nuevo vehículo en la base de datos
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nombre
+ *               - dispositivo_id
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *                 description: El nombre del vehículo
+ *                 example: "Camión 1"
+ *               dispositivo_id:
+ *                 type: string
+ *                 description: El ID del dispositivo del vehículo (debe ser único)
+ *                 example: "VH123456"
+ *               usuario_id:
+ *                 type: integer
+ *                 description: ID del usuario propietario (opcional)
+ *                 example: 1
+ *     responses:
+ *       201:
+ *         description: Vehículo creado correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     nombre:
+ *                       type: string
+ *                     dispositivo_id:
+ *                       type: string
+ *                     usuario_id:
+ *                       type: integer
+ *       400:
+ *         description: Faltan datos obligatorios
+ *       409:
+ *         description: Ya existe un vehículo con este dispositivo_id
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.post('/vehiculos', authMiddleware, createVehicle);
+
+/**
+ * @swagger
+ * /vehiculos:
+ *   get:
+ *     tags: [Vehículos]
+ *     summary: Listar vehículos
+ *     description: Obtiene una lista paginada de vehículos con opciones de búsqueda
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Número de página
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Número de elementos por página
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Término de búsqueda (nombre o dispositivo_id)
+ *     responses:
+ *       200:
+ *         description: Lista de vehículos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       nombre:
+ *                         type: string
+ *                       dispositivo_id:
+ *                         type: string
+ *                       usuario_id:
+ *                         type: integer
+ *                       usuario_nombre:
+ *                         type: string
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *                     hasNext:
+ *                       type: boolean
+ *                     hasPrev:
+ *                       type: boolean
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/vehiculos', authMiddleware, getVehicles);
+
+/**
+ * @swagger
+ * /vehiculos/{id}:
+ *   get:
+ *     tags: [Vehículos]
+ *     summary: Obtener un vehículo por ID
+ *     description: Obtiene los datos de un vehículo específico por su ID
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del vehículo
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Vehículo encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     nombre:
+ *                       type: string
+ *                     dispositivo_id:
+ *                       type: string
+ *                     usuario_id:
+ *                       type: integer
+ *                     usuario_nombre:
+ *                       type: string
+ *       404:
+ *         description: Vehículo no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/vehiculos/:id', authMiddleware, getVehicleById);
+
+/**
+ * @swagger
+ * /vehiculos/{id}:
+ *   put:
+ *     tags: [Vehículos]
+ *     summary: Actualizar un vehículo
+ *     description: Actualiza los datos de un vehículo existente
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del vehículo
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *                 description: El nombre del vehículo
+ *                 example: "Camión 1 Modificado"
+ *               dispositivo_id:
+ *                 type: string
+ *                 description: El ID del dispositivo del vehículo (debe ser único)
+ *                 example: "VH654321"
+ *               usuario_id:
+ *                 type: integer
+ *                 description: ID del usuario propietario
+ *                 example: 2
+ *     responses:
+ *       200:
+ *         description: Vehículo actualizado correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     nombre:
+ *                       type: string
+ *                     dispositivo_id:
+ *                       type: string
+ *                     usuario_id:
+ *                       type: integer
+ *       400:
+ *         description: Debe proporcionar al menos un campo para actualizar
+ *       404:
+ *         description: Vehículo no encontrado
+ *       409:
+ *         description: Ya existe otro vehículo con este dispositivo_id
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.put('/vehiculos/:id', authMiddleware, updateVehicle);
+
+/**
+ * @swagger
+ * /vehiculos/{id}:
+ *   delete:
+ *     tags: [Vehículos]
+ *     summary: Eliminar un vehículo
+ *     description: Elimina un vehículo específico por su ID
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del vehículo
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Vehículo eliminado correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     nombre:
+ *                       type: string
+ *       404:
+ *         description: Vehículo no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.delete('/vehiculos/:id', authMiddleware, deleteVehicle);
 
 module.exports = router;
