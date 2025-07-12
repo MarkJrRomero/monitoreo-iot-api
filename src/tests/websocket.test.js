@@ -60,7 +60,7 @@ describe('WebSocket Tests', () => {
 
   test('debe conectarse al WebSocket', (done) => {
     const port = server.address().port;
-    const ws = new WebSocket(`ws://localhost:${port}?token=${token}`);
+    const ws = new WebSocket(`ws://${process.env.BASE_URL_WS}?token=${token}`);
     
     ws.on('open', () => {
       expect(ws.readyState).toBe(WebSocket.OPEN);
@@ -76,7 +76,7 @@ describe('WebSocket Tests', () => {
 
   test('debe recibir mensaje de bienvenida', (done) => {
     const port = server.address().port;
-    const ws = new WebSocket(`ws://localhost:${port}?token=${token}`);
+    const ws = new WebSocket(`ws://${process.env.BASE_URL_WS}?token=${token}`);
     
     ws.on('message', (data) => {
       try {
@@ -98,7 +98,7 @@ describe('WebSocket Tests', () => {
 
   test('debe suscribirse a un vehículo', (done) => {
     const port = server.address().port;
-    const ws = new WebSocket(`ws://localhost:${port}?token=${token}`);
+    const ws = new WebSocket(`ws://${process.env.BASE_URL_WS}?token=${token}`);
     
     ws.on('open', () => {
       const subscribeMessage = {
@@ -132,7 +132,7 @@ describe('WebSocket Tests', () => {
 
   test('debe responder a ping', (done) => {
     const port = server.address().port;
-    const ws = new WebSocket(`ws://localhost:${port}?token=${token}`);
+    const ws = new WebSocket(`ws://${process.env.BASE_URL_WS}?token=${token}`);
     
     ws.on('open', () => {
       const pingMessage = { type: 'ping' };

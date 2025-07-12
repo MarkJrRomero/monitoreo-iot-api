@@ -109,7 +109,7 @@ class SimulatorService {
       };
 
       // Hacer petición HTTP al endpoint de ingesta
-      const response = await fetch(`http://localhost:${process.env.PORT || 3000}/api/ingesta`, {
+      const response = await fetch(`http://${process.env.BASE_API_URL}:${process.env.PORT || 3000}/api/ingesta`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

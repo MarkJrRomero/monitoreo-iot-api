@@ -1,4 +1,5 @@
 const swaggerJSDoc = require('swagger-jsdoc');
+require('dotenv').config();
 
 const swaggerDefinition = {
   openapi: '3.0.0',
@@ -9,7 +10,7 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: 'http://localhost:3000/api',
+      url: `${process.env.BASE_API_URL}/api`,
       description: 'Servidor de desarrollo'
     },
   ],
