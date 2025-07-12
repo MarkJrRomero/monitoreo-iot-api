@@ -14,7 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Configurar CORS - debe ir antes de las rutas
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: `${process.env.BASE_URL_WEB}`,
   credentials: true
 }));
 
@@ -51,9 +51,9 @@ app.get('/websocket-test', (req, res) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
-  console.log(`📊 Documentación disponible en http://localhost:${PORT}/api-docs`);
-  console.log(`🔌 WebSocket disponible en ws://localhost:${PORT}`);
-  console.log(`🧪 Cliente de prueba WebSocket en http://localhost:${PORT}/websocket-test`);
+  console.log(`📊 Documentación disponible en http://${process.env.BASE_URL_API}/api-docs`);
+  console.log(`🔌 WebSocket disponible en ws://${process.env.BASE_URL_WS}`);
+  console.log(`🧪 Cliente de prueba WebSocket en http://${process.env.BASE_URL_API}/websocket-test`);
 });
 
 
