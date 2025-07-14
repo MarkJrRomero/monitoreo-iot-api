@@ -269,7 +269,6 @@ exports.getActiveAlerts = async (req, res) => {
       JOIN vehiculos v ON s.vehiculo_id = v.id
       WHERE v.dispositivo_id = ${vehicleId}
       AND s.estado != 'normal'
-      AND s.timestamp >= NOW() - INTERVAL '1 hour'
       ORDER BY s.timestamp DESC
     `;
     
@@ -350,7 +349,6 @@ exports.getVehiclesWithAlerts = async (req, res) => {
       ) s ON true
       WHERE s.estado != 'normal' 
         AND s.estado IS NOT NULL
-        AND s.timestamp >= NOW() - INTERVAL '1 hour'
       ORDER BY s.timestamp DESC
     `;
     
@@ -375,8 +373,7 @@ exports.getAlertsSummary = async (req, res) => {
         COUNT(CASE WHEN estado LIKE '%alerta de exceso de velocidad%' THEN 1 END) as alertas_velocidad
       FROM sensores s
       JOIN vehiculos v ON s.vehiculo_id = v.id
-      WHERE s.estado != 'normal' 
-        AND s.timestamp >= NOW() - INTERVAL '1 hour'
+      WHERE s.estado != 'normal'
     `;
     
     res.json({

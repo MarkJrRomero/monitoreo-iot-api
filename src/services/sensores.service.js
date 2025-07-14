@@ -49,7 +49,6 @@ class SensoresService {
         JOIN vehiculos v ON s.vehiculo_id = v.id
         WHERE v.dispositivo_id = ${vehicleId}
         AND s.estado != 'normal'
-        AND s.timestamp >= NOW() - INTERVAL '1 hour'
         ORDER BY s.timestamp DESC
       `;
       
