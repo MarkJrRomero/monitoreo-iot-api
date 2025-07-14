@@ -28,9 +28,9 @@ class SimulatorService {
     
     // Crear token para las peticiones
     this.token = createToken(
-      { id: 1, rol: "admin", correo: "admin@demo.com" },
+      { id: 1, rol: "test-simulador", correo: "simulador@demo.com" },
       process.env.JWT_SECRET,
-      3600000
+      86400000
     );
   }
 
